@@ -26,7 +26,6 @@ function bowlHull(t, points, msg) {
   sameCells(t, hull, expectedCells, msg)
 }
 
-
 tape("parabola", function(t) {
 
   //In order list

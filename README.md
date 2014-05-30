@@ -44,6 +44,8 @@ Constructs a triangulation of the convex hull of `points` by incremental inserti
 
 **Returns** A list of the boundary cells of the convex hull of the point cloud.
 
+**Notes** This module works in any dimension greater than 2, though becomes pretty slow after 5d.
+
 # License
 
 (c) 2014 Mikola Lysenko. MIT License
