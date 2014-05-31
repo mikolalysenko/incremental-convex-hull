@@ -254,6 +254,37 @@ proto.insert = function(point, random) {
   }
 }
 
+//Extract all boundary cells
+proto.boundary = function() {
+  var d = this.dimension
+  var boundary = []
+  var cells = this.simplices
+  var nc = cells.length
+  for(var i=0; i<nc; ++i) {
+    var c = cells[i]
+    if(c.boundary) {
+      var bcell = new Array(d)
+      var cv = c.vertices
+      var ptr = 0
+      var parity = 0
+      for(var j=0; j<=d; ++j) {
+        if(cv[j] >= 0) {
+          bcell[ptr++] = cv[j]
+        } else {
+          parity = j&1
+        }
+      }
+      if(parity === (d&1)) {
+        var t = bcell[0]
+        bcell[0] = bcell[1]
+        bcell[1] = t
+      }
+      boundary.push(bcell)
+    }
+  }
+  return boundary
+}
+
 function incrementalConvexHull(points, randomSearch) {
   var n = points.length
   if(n === 0) {
@@ -327,31 +358,5 @@ function incrementalConvexHull(points, randomSearch) {
   }
   
   //Extract boundary cells
-  var boundary = []
-  var cells = triangles.simplices
-  var nc = cells.length
-  for(var i=0; i<nc; ++i) {
-    var c = cells[i]
-    if(c.boundary) {
-      var bcell = new Array(d)
-      var cv = c.vertices
-      var ptr = 0
-      var parity = 0
-      for(var j=0; j<=d; ++j) {
-        if(cv[j] >= 0) {
-          bcell[ptr++] = cv[j]
-        } else {
-          parity = j&1
-        }
-      }
-      if(parity === (d&1)) {
-        var t = bcell[0]
-        bcell[0] = bcell[1]
-        bcell[1] = t
-      }
-      boundary.push(bcell)
-    }
-  }
-
-  return boundary
+  return triangles.boundary()
 }

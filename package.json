@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "simplicial-complex": "^1.0.0",
-    "robust-orientation": "^1.1.2",
+    "robust-orientation": "^1.1.2"
   },
   "devDependencies": {
     "uniq": "^1.0.1",
-    "tape": "^2.12.3",
+    "tape": "^2.13.1",
     "permutation-parity": "^1.0.0"
   },
   "scripts": {
