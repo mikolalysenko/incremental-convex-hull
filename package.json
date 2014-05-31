@@ -1,0 +1,39 @@
+{
+  "name": "incremental-convex-hull",
+  "version": "1.0.0",
+  "description": "Incremental n-dimensional convex hull algorithm",
+  "main": "ich.js",
+  "directories": {
+    "example": "example",
+    "test": "test"
+  },
+  "dependencies": {
+    "simplicial-complex": "^1.0.0",
+    "robust-orientation": "^1.1.2",
+  },
+  "devDependencies": {
+    "uniq": "^1.0.1",
+    "tape": "^2.12.3",
+    "permutation-parity": "^1.0.0"
+  },
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mikolalysenko/incremental-convex-hull.git"
+  },
+  "keywords": [
+    "incremental",
+    "n-dimensional",
+    "convex",
+    "hull",
+    "algorithm"
+  ],
+  "author": "Mikola Lysenko",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mikolalysenko/incremental-convex-hull/issues"
+  },
+  "homepage": "https://github.com/mikolalysenko/incremental-convex-hull"
+}
