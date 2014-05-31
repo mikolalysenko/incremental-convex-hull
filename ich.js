@@ -50,6 +50,42 @@ function Triangulation(dimension, vertices, simplices) {
 
 var proto = Triangulation.prototype
 
+//Degenerate situation where we are on boundary, but coplanar to face
+proto.handleBoundaryDegeneracy = function(cell, point) {
+  var d = this.dimension
+  var n = this.vertices.length - 1
+  var tuple = new Array(d+1)
+  //Dumb solution: Just do dfs from boundary cell until we find any peak, or terminate
+  var toVisit = [ cell ]
+  cell.lastVisited = -n
+  while(toVisit.length > 0) {
+    cell = toVisit.pop()
+    for(var i=0; i<=d; ++i) {
+      var neighbor = cell.adjacent[i]
+      if(!neighbor.boundary || neighbor.lastVisited <= -n) {
+        continue
+      }
+      for(var j=0; j<=d; ++j) {
+        var vv = neighbor.vertices[j]
+        if(vv < 0) {
+          tuple[j] = point
+        } else {
+          tuple[j] = this.vertices[vv]
+        }
+      }
+      var o = orient.apply(void 0, tuple)
+      if(o > 0) {
+        return neighbor
+      }
+      neighbor.lastVisited = -n
+      if(o === 0) {
+        toVisit.push(neighbor)
+      }
+    }
+  }
+  return null
+}
+
 proto.insert = function(point, random) {
   //Alias local properties
   var n = this.vertices.length
@@ -69,11 +105,15 @@ proto.insert = function(point, random) {
     for(var i=0; i<=d; ++i) {
       tuple[i] = verts[cell.vertices[i]]
     }
+    cell.lastVisited = n
 
     //Find farthest adjacent cell
-    var farthest = 0
+    var farthest = -1
     var farthestV = 1
     for(var i=0; i<=d; ++i) {
+      if(cell.adjacent[i].lastVisited >= n) {
+        continue
+      }
       var prev = tuple[i]
       tuple[i] = point
       var o = orient.apply(void 0, tuple)
@@ -84,11 +124,34 @@ proto.insert = function(point, random) {
       }
     }
 
+    //If we are at a boundary, stop walking
+    if(farthest < 0) {
+      break
+    }
     //If we are stuck inside a cell, terminate
-    if(farthestV >= 0) {
+    if(farthestV > 0) {
       return
     }
     cell = cell.adjacent[farthest]
+  }
+
+  //Degenerate case: If point is coplanar to cell, then walk until we find a non-degenerate boundary
+  for(var i=0; i<=d; ++i) {
+    var vv = cell.vertices[i]
+    if(vv < 0) {
+      tuple[i] = point
+    } else {
+      tuple[i] = verts[vv]
+    }
+  }
+  var o = orient.apply(void 0, tuple)
+  if(o < 0) {
+    return
+  } else if(o === 0) {
+    cell = this.handleBoundaryDegeneracy(cell, point)
+    if(!cell) {
+      return
+    }
   }
 
   //Walking finished at boundary, time to add peaks
@@ -129,7 +192,7 @@ proto.insert = function(point, random) {
         var o = orient.apply(void 0, tuple)
 
         //Test if neighbor cell is also a peak
-        if(o >= 0) {
+        if(o > 0) {
           nv[nv.indexOf(-1)] = n
           neighbor.boundary = false
           this.interior.push(neighbor)

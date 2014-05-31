@@ -30,7 +30,7 @@ function createHypercube(dimension, numSubdivs) {
 }
 
 function validateCube(t, dimension) {
-  var verts = createHypercube(dimension, 3)
+  var verts = createHypercube(dimension, 3 + (4-dimension)*2)
 
   //Shuffle vertices
 
@@ -47,6 +47,17 @@ function validateCube(t, dimension) {
 
   var hull = ch(verts, true)
 
+  /*
+  console.log(hull)
+  console.log(hull.map(function(f) {
+    return f.map(function(v) {
+      return verts[v]
+    })
+  }))
+  */
+
+  //TODO: Check that area for each face matches
+
   var hullverts = []
   for(var i=0; i<hull.length; ++i) {
     t.equals(hull[i].length, dimension, "check facet: " + hull[i].join())
@@ -55,16 +66,35 @@ function validateCube(t, dimension) {
   uniq(hullverts)
 
 
+  var cornerTab = new Array(1<<dimension)
+  var expectedTab = new Array(1<<dimension)
+  for(var i=0; i<(1<<dimension); ++i) {
+    cornerTab[i] = 0
+    expectedTab[i] = 1
+  }
+
   for(var i=0; i<hullverts.length; ++i) {
     var p = verts[hullverts[i]]
     var onboundary = false
+    var index = 0
+    var corner = true
     for(var j=0; j<dimension; ++j) {
       if(p[j] === 0 || p[j] === 1) {
         onboundary = true
+        index += p[j]<<j
+      } else {
+        corner = false
       }
     }
+
+    if(corner) {
+      cornerTab[index] = 1
+    }
+
     t.ok(onboundary, "point on boundary: " + p.join())
   }
+
+  t.same(cornerTab, expectedTab, "all corners are covered")
 }
 
 tape("cube-2d", function(t) {
