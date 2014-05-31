@@ -36,7 +36,7 @@ npm install incremental-convex-hull
 
 # API
 
-### `require("incremental-convex-hull")(points[, randomInsert])`
+#### `require("incremental-convex-hull")(points[, randomInsert])`
 Constructs a triangulation of the convex hull of `points` by incremental insertion.
 
 * `points` is a list of points
