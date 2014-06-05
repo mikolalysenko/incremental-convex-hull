@@ -3,6 +3,10 @@ Computes the convex hull of a collection of points in general position by increm
 
 This module is meant to be used internally by other modules for calculating convex hulls and Delaunay triangulations.  You probably shouldn't call it directly unless you know what you are doing.  Instead, there will (eventually) be a wrapper over this module that handles all the special cases and correctly generates a convex hull.
 
+[![testling badge](https://ci.testling.com/mikolalysenko/incremental-convex-hull.png)](https://ci.testling.com/mikolalysenko/incremental-convex-hull)
+
+[![build status](https://secure.travis-ci.org/mikolalysenko/incremental-convex-hull.png)](http://travis-ci.org/mikolalysenko/incremental-convex-hull)
+
 # Example
 
 ```javascript
