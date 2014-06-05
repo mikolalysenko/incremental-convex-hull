@@ -46,6 +46,18 @@ function Triangulation(dimension, vertices, simplices) {
   this.interior = simplices.filter(function(c) {
     return !c.boundary
   })
+
+  var test = orient[dimension+1]
+  if(test) {
+    this.orient = test
+  } else {
+    this.orient = orient
+  }
+
+  this.tuple = new Array(dimension+1)
+  for(var i=0; i<=dimension; ++i) {
+    this.tuple[i] = this.vertices[i]
+  }
 }
 
 var proto = Triangulation.prototype
@@ -54,7 +66,9 @@ var proto = Triangulation.prototype
 proto.handleBoundaryDegeneracy = function(cell, point) {
   var d = this.dimension
   var n = this.vertices.length - 1
-  var tuple = new Array(d+1)
+  var orient = this.orient
+  var tuple = this.tuple
+
   //Dumb solution: Just do dfs from boundary cell until we find any peak, or terminate
   var toVisit = [ cell ]
   cell.lastVisited = -n
@@ -86,21 +100,19 @@ proto.handleBoundaryDegeneracy = function(cell, point) {
   return null
 }
 
-proto.insert = function(point, random) {
+proto.walk = function(point, random) {
   //Alias local properties
-  var n = this.vertices.length
+  var n = this.vertices.length - 1
   var d = this.dimension
-
-  //Add point
+  var orient = this.orient
   var verts = this.vertices
-  verts.push(point)
+  var tuple = this.tuple
 
   //Compute initial jump cell
   var initIndex = random ? (this.interior.length * Math.random())|0 : (this.interior.length-1)
   var cell = this.interior[ initIndex ]
 
   //Start walking
-  var tuple = new Array(d + 1)
   while(!cell.boundary) {
     for(var i=0; i<=d; ++i) {
       tuple[i] = verts[cell.vertices[i]]
@@ -135,24 +147,15 @@ proto.insert = function(point, random) {
     cell = cell.adjacent[farthest]
   }
 
-  //Degenerate case: If point is coplanar to cell, then walk until we find a non-degenerate boundary
-  for(var i=0; i<=d; ++i) {
-    var vv = cell.vertices[i]
-    if(vv < 0) {
-      tuple[i] = point
-    } else {
-      tuple[i] = verts[vv]
-    }
-  }
-  var o = orient.apply(void 0, tuple)
-  if(o < 0) {
-    return
-  } else if(o === 0) {
-    cell = this.handleBoundaryDegeneracy(cell, point)
-    if(!cell) {
-      return
-    }
-  }
+  return cell
+}
+
+proto.addPeaks = function(point, cell) {
+  var n = this.vertices.length - 1
+  var d = this.dimension
+  var orient = this.orient
+  var verts = this.vertices
+  var tuple = this.tuple
 
   //Walking finished at boundary, time to add peaks
   var tovisit = [ cell ]
@@ -252,6 +255,44 @@ proto.insert = function(point, random) {
     a.cell.adjacent[a.index] = b.cell
     b.cell.adjacent[b.index] = a.cell
   }
+}
+
+proto.insert = function(point, random) {
+  //Add point
+  var verts = this.vertices
+  verts.push(point)
+
+  var cell = this.walk(point, random)
+  if(!cell) {
+    return
+  }
+
+  //Alias local properties
+  var d = this.dimension
+  var orient = this.orient
+  var tuple = this.tuple
+
+  //Degenerate case: If point is coplanar to cell, then walk until we find a non-degenerate boundary
+  for(var i=0; i<=d; ++i) {
+    var vv = cell.vertices[i]
+    if(vv < 0) {
+      tuple[i] = point
+    } else {
+      tuple[i] = verts[vv]
+    }
+  }
+  var o = orient.apply(void 0, tuple)
+  if(o < 0) {
+    return
+  } else if(o === 0) {
+    cell = this.handleBoundaryDegeneracy(cell, point)
+    if(!cell) {
+      return
+    }
+  }
+
+  //Add peaks
+  this.addPeaks(point, cell)
 }
 
 //Extract all boundary cells
