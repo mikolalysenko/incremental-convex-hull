@@ -39,6 +39,25 @@ function compareGlue(a, b) {
   return compareCell(a.vertices, b.vertices)
 }
 
+function bakeOrient(d) {
+  var code = ["function orient(){var tuple=this.tuple;return test("]
+  for(var i=0; i<=d; ++i) {
+    if(i > 0) {
+      code.push(",")
+    }
+    code.push("tuple[", i, "]")
+  }
+  code.push(")}return orient")
+  var proc = new Function("test", code.join(""))
+  var test = orient[d+1]
+  if(!test) {
+    test = orient
+  }
+  return proc(test)
+}
+
+var BAKED = []
+
 function Triangulation(dimension, vertices, simplices) {
   this.dimension = dimension
   this.vertices = vertices
@@ -47,17 +66,16 @@ function Triangulation(dimension, vertices, simplices) {
     return !c.boundary
   })
 
-  var test = orient[dimension+1]
-  if(test) {
-    this.orient = test
-  } else {
-    this.orient = orient
-  }
-
   this.tuple = new Array(dimension+1)
   for(var i=0; i<=dimension; ++i) {
     this.tuple[i] = this.vertices[i]
   }
+
+  var o = BAKED[dimension]
+  if(!o) {
+    o = BAKED[dimension] = bakeOrient(dimension)
+  }
+  this.orient = o
 }
 
 var proto = Triangulation.prototype
@@ -66,28 +84,31 @@ var proto = Triangulation.prototype
 proto.handleBoundaryDegeneracy = function(cell, point) {
   var d = this.dimension
   var n = this.vertices.length - 1
-  var orient = this.orient
   var tuple = this.tuple
+  var verts = this.vertices
 
   //Dumb solution: Just do dfs from boundary cell until we find any peak, or terminate
   var toVisit = [ cell ]
   cell.lastVisited = -n
   while(toVisit.length > 0) {
     cell = toVisit.pop()
+    var cellVerts = cell.vertices
+    var cellAdj = cell.adjacent
     for(var i=0; i<=d; ++i) {
-      var neighbor = cell.adjacent[i]
+      var neighbor = cellAdj[i]
       if(!neighbor.boundary || neighbor.lastVisited <= -n) {
         continue
       }
+      var nv = neighbor.vertices
       for(var j=0; j<=d; ++j) {
-        var vv = neighbor.vertices[j]
+        var vv = nv[j]
         if(vv < 0) {
           tuple[j] = point
         } else {
-          tuple[j] = this.vertices[vv]
+          tuple[j] = verts[vv]
         }
       }
-      var o = orient.apply(void 0, tuple)
+      var o = this.orient()
       if(o > 0) {
         return neighbor
       }
@@ -104,7 +125,6 @@ proto.walk = function(point, random) {
   //Alias local properties
   var n = this.vertices.length - 1
   var d = this.dimension
-  var orient = this.orient
   var verts = this.vertices
   var tuple = this.tuple
 
@@ -113,38 +133,38 @@ proto.walk = function(point, random) {
   var cell = this.interior[ initIndex ]
 
   //Start walking
+outerLoop:
   while(!cell.boundary) {
+    var cellVerts = cell.vertices
+    var cellAdj = cell.adjacent
+
     for(var i=0; i<=d; ++i) {
-      tuple[i] = verts[cell.vertices[i]]
+      tuple[i] = verts[cellVerts[i]]
     }
     cell.lastVisited = n
 
     //Find farthest adjacent cell
-    var farthest = -1
-    var farthestV = 1
     for(var i=0; i<=d; ++i) {
-      if(cell.adjacent[i].lastVisited >= n) {
+      var neighbor = cellAdj[i]
+      if(neighbor.lastVisited >= n) {
         continue
       }
       var prev = tuple[i]
       tuple[i] = point
-      var o = orient.apply(void 0, tuple)
+      var o = this.orient()
       tuple[i] = prev
-      if(o < farthestV) {
-        farthest = i
-        farthestV = o
+      if(o < 0) {
+        cell = neighbor
+        continue outerLoop
+      } else {
+        if(!neighbor.boundary) {
+          neighbor.lastVisited = n
+        } else {
+          neighbor.lastVisited = -n
+        }
       }
     }
-
-    //If we are at a boundary, stop walking
-    if(farthest < 0) {
-      break
-    }
-    //If we are stuck inside a cell, terminate
-    if(farthestV > 0) {
-      return
-    }
-    cell = cell.adjacent[farthest]
+    return
   }
 
   return cell
@@ -153,9 +173,10 @@ proto.walk = function(point, random) {
 proto.addPeaks = function(point, cell) {
   var n = this.vertices.length - 1
   var d = this.dimension
-  var orient = this.orient
   var verts = this.vertices
   var tuple = this.tuple
+  var interior = this.interior
+  var simplices = this.simplices
 
   //Walking finished at boundary, time to add peaks
   var tovisit = [ cell ]
@@ -164,7 +185,7 @@ proto.addPeaks = function(point, cell) {
   cell.lastVisited = n
   cell.vertices[cell.vertices.indexOf(-1)] = n
   cell.boundary = false
-  this.interior.push(cell)
+  interior.push(cell)
 
   //Record a list of all new boundaries created by added peaks so we can glue them together when we are all done
   var glueFacets = []
@@ -173,32 +194,45 @@ proto.addPeaks = function(point, cell) {
   while(tovisit.length > 0) {
     //Pop off peak and walk over adjacent cells
     var cell = tovisit.pop()
+    var cellVerts = cell.vertices
+    var cellAdj = cell.adjacent
+    var indexOfN = cellVerts.indexOf(n)
+    if(indexOfN < 0) {
+      continue
+    }
 
     for(var i=0; i<=d; ++i) {
+      if(i === indexOfN) {
+        continue
+      }
+
       //For each boundary neighbor of the cell
-      var neighbor = cell.adjacent[i]
+      var neighbor = cellAdj[i]
       if(!neighbor.boundary || neighbor.lastVisited >= n) {
         continue
       }
 
+      var nv = neighbor.vertices
+
       //Test if neighbor is a peak
       if(neighbor.lastVisited !== -n) {      
         //Compute orientation of p relative to each boundary peak
-        var nv = neighbor.vertices
+        var indexOfNeg1 = 0
         for(var j=0; j<=d; ++j) {
           if(nv[j] < 0) {
+            indexOfNeg1 = j
             tuple[j] = point
           } else {
             tuple[j] = verts[nv[j]]
           }
         }
-        var o = orient.apply(void 0, tuple)
+        var o = this.orient()
 
         //Test if neighbor cell is also a peak
         if(o > 0) {
-          nv[nv.indexOf(-1)] = n
+          nv[indexOfNeg1] = n
           neighbor.boundary = false
-          this.interior.push(neighbor)
+          interior.push(neighbor)
           tovisit.push(neighbor)
           neighbor.lastVisited = n
           continue
@@ -207,21 +241,26 @@ proto.addPeaks = function(point, cell) {
         }
       }
 
+      var na = neighbor.adjacent
+
       //Otherwise, replace neighbor with new face
-      var vverts = cell.vertices.slice()
-      var vadj = cell.adjacent.slice()
+      var vverts = cellVerts.slice()
+      var vadj = cellAdj.slice()
       var ncell = new Simplex(vverts, vadj, true)
-      this.simplices.push(ncell)
+      simplices.push(ncell)
 
       //Connect to neighbor
-      var opposite = neighbor.adjacent.indexOf(cell)
-      neighbor.adjacent[opposite] = ncell
-      ncell.adjacent[vverts.indexOf(n)] = neighbor
+      var opposite = na.indexOf(cell)
+      if(opposite < 0) {
+        continue
+      }
+      na[opposite] = ncell
+      vadj[indexOfN] = neighbor
 
       //Connect to cell
       vverts[i] = -1
       vadj[i] = cell
-      cell.adjacent[i] = ncell
+      cellAdj[i] = ncell
 
       //Flip facet
       ncell.flip()
@@ -229,14 +268,14 @@ proto.addPeaks = function(point, cell) {
       //Add to glue list
       for(var j=0; j<=d; ++j) {
         var uu = vverts[j]
-        if(uu === -1 || uu === n) {
+        if(uu < 0 || uu === n) {
           continue
         }
         var nface = new Array(d-1)
         var nptr = 0
         for(var k=0; k<=d; ++k) {
           var vv = vverts[k]
-          if(vv === -1 || k === j) {
+          if(vv < 0 || k === j) {
             continue
           }
           nface[nptr++] = vv
@@ -249,9 +288,14 @@ proto.addPeaks = function(point, cell) {
   //Glue boundary facets together
   glueFacets.sort(compareGlue)
 
-  for(var i=0; i<glueFacets.length; i+=2) {
+  for(var i=0; i+1<glueFacets.length; i+=2) {
     var a = glueFacets[i]
     var b = glueFacets[i+1]
+    var ai = a.index
+    var bi = b.index
+    if(ai < 0 || bi < 0) {
+      continue
+    }
     a.cell.adjacent[a.index] = b.cell
     b.cell.adjacent[b.index] = a.cell
   }
@@ -269,7 +313,6 @@ proto.insert = function(point, random) {
 
   //Alias local properties
   var d = this.dimension
-  var orient = this.orient
   var tuple = this.tuple
 
   //Degenerate case: If point is coplanar to cell, then walk until we find a non-degenerate boundary
@@ -281,7 +324,7 @@ proto.insert = function(point, random) {
       tuple[i] = verts[vv]
     }
   }
-  var o = orient.apply(void 0, tuple)
+  var o = this.orient(tuple)
   if(o < 0) {
     return
   } else if(o === 0) {
