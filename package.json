@@ -1,6 +1,6 @@
 {
   "name": "incremental-convex-hull",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Incremental n-dimensional convex hull algorithm",
   "main": "ich.js",
   "directories": {
