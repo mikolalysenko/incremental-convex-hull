@@ -35,6 +35,8 @@ function compareGlue(a, b) {
   return compareCell(a.vertices, b.vertices)
 }
 
+var allStr = 'var allFns = ['
+
 function bakeOrient(d) {
   var code = ["function orient(){var tuple=this.tuple;return test("]
   for(var i=0; i<=d; ++i) {
@@ -44,13 +46,25 @@ function bakeOrient(d) {
     code.push("tuple[", i, "]")
   }
   code.push(")}return orient")
-  var proc = function() {} //new Function("test", code.join(""))
+  var proc = new Function("test", code.join(""))
+
+  var str = proc.toString().replace(/\n/g,"").replace("anonymous", "orient_" + d)
+  allStr += '\n' + str + ','
+
   var test = orient[d+1]
   if(!test) {
     test = orient
   }
   return proc(test)
 }
+
+bakeOrient(0)
+bakeOrient(1)
+bakeOrient(2)
+bakeOrient(3)
+bakeOrient(4)
+
+console.log(allStr + '\n]')
 
 var BAKED = []
 
