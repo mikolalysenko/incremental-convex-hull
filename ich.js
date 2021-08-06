@@ -44,7 +44,7 @@ function bakeOrient(d) {
     code.push("tuple[", i, "]")
   }
   code.push(")}return orient")
-  var proc = new Function("test", code.join(""))
+  var proc = function() {} //new Function("test", code.join(""))
   var test = orient[d+1]
   if(!test) {
     test = orient
