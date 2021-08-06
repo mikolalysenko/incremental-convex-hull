@@ -9,10 +9,6 @@ module.exports = incrementalConvexHull
 var orient = require("robust-orientation")
 var compareCell = require("simplicial-complex").compareCells
 
-function compareInt(a, b) {
-  return a - b
-}
-
 function Simplex(vertices, adjacent, boundary) {
   this.vertices = vertices
   this.adjacent = adjacent
@@ -92,7 +88,6 @@ proto.handleBoundaryDegeneracy = function(cell, point) {
   cell.lastVisited = -n
   while(toVisit.length > 0) {
     cell = toVisit.pop()
-    var cellVerts = cell.vertices
     var cellAdj = cell.adjacent
     for(var i=0; i<=d; ++i) {
       var neighbor = cellAdj[i]
