@@ -35,36 +35,21 @@ function compareGlue(a, b) {
   return compareCell(a.vertices, b.vertices)
 }
 
-var allStr = 'var allFns = ['
+var allFns = [
+  function orient_0(test) { return function() { var tuple = this.tuple; return test(tuple[0]) } },
+  function orient_1(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1]) } },
+  function orient_2(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1], tuple[2]) } },
+  function orient_3(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1], tuple[2], tuple[3]) } },
+  function orient_4(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1], tuple[2], tuple[3], tuple[4]) } },
+]
 
 function bakeOrient(d) {
-  var code = ["function orient(){var tuple=this.tuple;return test("]
-  for(var i=0; i<=d; ++i) {
-    if(i > 0) {
-      code.push(",")
-    }
-    code.push("tuple[", i, "]")
-  }
-  code.push(")}return orient")
-  var proc = new Function("test", code.join(""))
-
-  var str = proc.toString().replace(/\n/g,"").replace("anonymous", "orient_" + d)
-  allStr += '\n' + str + ','
-
   var test = orient[d+1]
   if(!test) {
     test = orient
   }
-  return proc(test)
+  return allFns[d](test)
 }
-
-bakeOrient(0)
-bakeOrient(1)
-bakeOrient(2)
-bakeOrient(3)
-bakeOrient(4)
-
-console.log(allStr + '\n]')
 
 var BAKED = []
 
