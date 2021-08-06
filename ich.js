@@ -215,7 +215,7 @@ proto.addPeaks = function(point, cell) {
       var nv = neighbor.vertices
 
       //Test if neighbor is a peak
-      if(neighbor.lastVisited !== -n) {      
+      if(neighbor.lastVisited !== -n) {
         //Compute orientation of p relative to each boundary peak
         var indexOfNeg1 = 0
         for(var j=0; j<=d; ++j) {
@@ -440,7 +440,7 @@ function incrementalConvexHull(points, randomSearch) {
   for(var i=d+1; i<n; ++i) {
     triangles.insert(points[i], useRandom)
   }
-  
+
   //Extract boundary cells
   return triangles.boundary()
 }
