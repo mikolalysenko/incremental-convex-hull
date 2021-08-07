@@ -35,20 +35,19 @@ function compareGlue(a, b) {
   return compareCell(a.vertices, b.vertices)
 }
 
-var allFns = [
-  function orient_0(test) { return function() { var tuple = this.tuple; return test(tuple[0]) } },
-  function orient_1(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1]) } },
-  function orient_2(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1], tuple[2]) } },
-  function orient_3(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1], tuple[2], tuple[3]) } },
-  function orient_4(test) { return function() { var tuple = this.tuple; return test(tuple[0], tuple[1], tuple[2], tuple[3], tuple[4]) } },
-]
+function wrapper(test) {
+  return function() {
+    var tuple = this.tuple
+    return test.apply(this, tuple)
+  }
+}
 
 function bakeOrient(d) {
   var test = orient[d+1]
   if(!test) {
     test = orient
   }
-  return allFns[d](test)
+  return wrapper(test)
 }
 
 var BAKED = []
