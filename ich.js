@@ -9,10 +9,6 @@ module.exports = incrementalConvexHull
 var orient = require("robust-orientation")
 var compareCell = require("simplicial-complex").compareCells
 
-function compareInt(a, b) {
-  return a - b
-}
-
 function Simplex(vertices, adjacent, boundary) {
   this.vertices = vertices
   this.adjacent = adjacent
@@ -39,21 +35,19 @@ function compareGlue(a, b) {
   return compareCell(a.vertices, b.vertices)
 }
 
-function bakeOrient(d) {
-  var code = ["function orient(){var tuple=this.tuple;return test("]
-  for(var i=0; i<=d; ++i) {
-    if(i > 0) {
-      code.push(",")
-    }
-    code.push("tuple[", i, "]")
+function wrapper(test) {
+  return function() {
+    var tuple = this.tuple
+    return test.apply(this, tuple)
   }
-  code.push(")}return orient")
-  var proc = new Function("test", code.join(""))
+}
+
+function bakeOrient(d) {
   var test = orient[d+1]
   if(!test) {
     test = orient
   }
-  return proc(test)
+  return wrapper(test)
 }
 
 var BAKED = []
@@ -92,7 +86,6 @@ proto.handleBoundaryDegeneracy = function(cell, point) {
   cell.lastVisited = -n
   while(toVisit.length > 0) {
     cell = toVisit.pop()
-    var cellVerts = cell.vertices
     var cellAdj = cell.adjacent
     for(var i=0; i<=d; ++i) {
       var neighbor = cellAdj[i]
@@ -215,7 +208,7 @@ proto.addPeaks = function(point, cell) {
       var nv = neighbor.vertices
 
       //Test if neighbor is a peak
-      if(neighbor.lastVisited !== -n) {      
+      if(neighbor.lastVisited !== -n) {
         //Compute orientation of p relative to each boundary peak
         var indexOfNeg1 = 0
         for(var j=0; j<=d; ++j) {
@@ -440,7 +433,7 @@ function incrementalConvexHull(points, randomSearch) {
   for(var i=d+1; i<n; ++i) {
     triangles.insert(points[i], useRandom)
   }
-  
+
   //Extract boundary cells
   return triangles.boundary()
 }
